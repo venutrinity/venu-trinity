@@ -1,43 +1,76 @@
 "use client";
+
+import Link from "next/link";
 import { useState } from "react";
+
+const navLinks = [
+  { label: "Home", href: "/" },
+  { label: "Services", href: "/services" },
+  { label: "Work", href: "/portfolio" },
+  { label: "About", href: "/about" },
+  { label: "Contact", href: "/contact" },
+];
+
 export default function Navbar() {
-    const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+
+  const closeMenu = () => {
+    setIsOpen(false);
+  };
+
   return (
-    <header className="relative border-b border-white/10 bg-white">
+    <header className="relative z-50 border-b border-white/10 bg-white">
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-        
-        <h2 className="text-xl font-semibold tracking-tight text-black">
+        {/* Logo */}
+        <Link
+          href="/"
+          onClick={closeMenu}
+          className="text-xl font-semibold tracking-tight text-black"
+        >
           Venu Trinity
-        </h2>
+        </Link>
 
         {/* Desktop Menu */}
-        <div className="hidden md:flex items-center gap-8 text-sm text-gray-500">
-          <a href="#">Home</a>
-          <a href="#">Services</a>
-          <a href="#">Work</a>
-          <a href="#">About</a>
-          <a href="#">Contact</a>
+        <div className="hidden items-center gap-8 text-sm text-gray-500 md:flex">
+          {navLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="transition-colors hover:text-black"
+            >
+              {link.label}
+            </Link>
+          ))}
         </div>
 
         {/* Mobile Menu Button */}
-    <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="md:hidden text-black text-2xl"
-    >
-        {isOpen ? "✕" : "☰"}
-    </button>
-    {isOpen && (
-  <div className="absolute left-0 top-full w-full bg-white px-6 py-6 md:hidden">
-    <div className="flex flex-col gap-5 text-sm text-gray-500">
-      <a href="#">Home</a>
-      <a href="#">Services</a>
-      <a href="#">Work</a>
-      <a href="#">About</a>
-      <a href="#">Contact</a>
-    </div>
-  </div>
-)}
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          aria-label={isOpen ? "Close menu" : "Open menu"}
+          aria-expanded={isOpen}
+          className="text-2xl text-black md:hidden"
+        >
+          {isOpen ? "✕" : "☰"}
+        </button>
 
+        {/* Mobile Menu */}
+        {isOpen && (
+          <div className="absolute left-0 top-full w-full border-b border-black/10 bg-white px-6 py-6 shadow-lg md:hidden">
+            <div className="flex flex-col gap-5 text-sm text-gray-500">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={closeMenu}
+                  className="transition-colors hover:text-black"
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </nav>
     </header>
   );
