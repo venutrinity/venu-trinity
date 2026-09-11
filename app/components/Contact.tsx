@@ -15,12 +15,12 @@ export default function Contact() {
           <h2 className="max-w-5xl text-5xl font-semibold leading-[0.95] tracking-[-0.05em] md:text-7xl lg:text-8xl">
             Have an idea?
             <br />
-            <span className="text-white/35">Let's create it.</span>
+            <span className="text-white/35">Let&apos;s create it.</span>
           </h2>
 
           <p className="mt-8 max-w-xl text-base leading-7 text-white/40 md:text-lg">
-            Tell us what you're building, what you need, and where you want
-            to go. Let's turn your idea into something meaningful.
+            TTell us what you&apos;re building, what you need, and where you want
+            to go. Let&apos;s turn your idea into something meaningful.
           </p>
         </div>
 
