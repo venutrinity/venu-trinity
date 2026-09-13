@@ -1,24 +1,20 @@
-import { cookies } from "next/headers";
-import jwt from "jsonwebtoken";
+import { getAuthUser } from "@/app/lib/auth";
 
 import connectDB from "@/app/lib/mongodb";
 import Order from "@/app/models/Order";
 import User from "@/app/models/User";
 
-const JWT_SECRET = process.env.JWT_SECRET;
-
-if (!JWT_SECRET) {
-  throw new Error("Please define JWT_SECRET in .env.local");
-}
-
 export async function GET() {
   try {
     await connectDB();
 
-    const cookieStore = await cookies();
-    const token = cookieStore.get("auth_token")?.value;
+    // --------------------------------------------------
+    // 1. Authentication
+    // --------------------------------------------------
 
-    if (!token) {
+    const authUser = await getAuthUser();
+
+    if (!authUser) {
       return Response.json(
         {
           success: false,
@@ -28,12 +24,11 @@ export async function GET() {
       );
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET) as {
-      userId: string;
-      role: "customer" | "admin";
-    };
+    // --------------------------------------------------
+    // 2. Verify admin
+    // --------------------------------------------------
 
-    if (decoded.role !== "admin") {
+    if (authUser.role !== "admin") {
       return Response.json(
         {
           success: false,
@@ -43,6 +38,10 @@ export async function GET() {
       );
     }
 
+    // --------------------------------------------------
+    // 3. Get orders
+    // --------------------------------------------------
+
     const orders = await Order.find({})
       .sort({ createdAt: -1 })
       .lean();
@@ -50,7 +49,9 @@ export async function GET() {
     const customerIds = [
       ...new Set(
         orders
-          .map((order) => order.customerId?.toString())
+          .map((order) =>
+            order.customerId?.toString()
+          )
           .filter(Boolean)
       ),
     ];
@@ -68,34 +69,63 @@ export async function GET() {
       ])
     );
 
+    // --------------------------------------------------
+    // 4. Response
+    // --------------------------------------------------
+
     return Response.json({
       success: true,
+
       orders: orders.map((order) => {
-        const customerId = order.customerId?.toString();
+        const customerId =
+          order.customerId?.toString();
+
         const customer = customerId
           ? customerMap.get(customerId)
           : null;
 
         return {
           id: order._id.toString(),
-          orderNumber: order.orderNumber,
+
+          orderNumber:
+            order.orderNumber,
 
           customer: {
-            id: customer?._id?.toString() || customerId || "",
-            name: customer?.name || "Unknown Customer",
-            email: customer?.email || "",
-            phone: customer?.phone || "",
+            id:
+              customer?._id?.toString() ||
+              customerId ||
+              "",
+
+            name:
+              customer?.name ||
+              "Unknown Customer",
+
+            email:
+              customer?.email || "",
+
+            phone:
+              customer?.phone || "",
           },
 
-          totalAmount: order.totalAmount,
-          paymentStatus: order.paymentStatus,
-          orderStatus: order.orderStatus,
-          createdAt: order.createdAt,
+          totalAmount:
+            order.totalAmount,
+
+          paymentStatus:
+            order.paymentStatus,
+
+          orderStatus:
+            order.orderStatus,
+
+          createdAt:
+            order.createdAt,
         };
       }),
     });
   } catch (error) {
-    console.error("Failed to load admin orders:", error);
+    console.error(
+      "Failed to load admin orders:",
+      error
+    );
 
     return Response.json(
       {

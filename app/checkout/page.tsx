@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Navbar from "../components/Navbar";
@@ -21,7 +21,7 @@ type User = {
   email: string;
 };
 
-export default function CheckoutPage() {
+function CheckoutContent() {
   const searchParams = useSearchParams();
   const productId = searchParams.get("product");
 
@@ -41,7 +41,9 @@ export default function CheckoutPage() {
       }
 
       try {
-        const response = await fetch(`/api/products/${productId}`);
+        const response = await fetch(
+          `/api/products/${productId}`
+        );
 
         const data = await response.json();
 
@@ -49,7 +51,10 @@ export default function CheckoutPage() {
           setProduct(data.product);
         }
       } catch (error) {
-        console.error("Failed to load product:", error);
+        console.error(
+          "Failed to load product:",
+          error
+        );
       } finally {
         setLoading(false);
       }
@@ -61,7 +66,9 @@ export default function CheckoutPage() {
   useEffect(() => {
     async function checkUser() {
       try {
-        const response = await fetch("/api/auth/me");
+        const response = await fetch(
+          "/api/auth/me"
+        );
 
         const data = await response.json();
 
@@ -69,7 +76,10 @@ export default function CheckoutPage() {
           setUser(data.user);
         }
       } catch (error) {
-        console.error("Failed to check authentication:", error);
+        console.error(
+          "Failed to check authentication:",
+          error
+        );
       } finally {
         setUserLoading(false);
       }
@@ -79,28 +89,37 @@ export default function CheckoutPage() {
   }, []);
 
   async function handleProceedToPayment() {
-    if (!productId) return;
+    if (!productId || !product) {
+      setOrderError(
+        "Product information is not available."
+      );
+      return;
+    }
 
     setCreatingOrder(true);
     setOrderError("");
 
     try {
-      const response = await fetch("/api/orders", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          productId,
-          quantity: 1,
-        }),
-      });
+      const response = await fetch(
+        "/api/orders",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            productId,
+            quantity: 1,
+          }),
+        }
+      );
 
       const data = await response.json();
 
       if (!response.ok) {
         setOrderError(
-          data.message || "Failed to create order"
+          data.message ||
+            "Failed to create order"
         );
         return;
       }
@@ -114,15 +133,24 @@ Amount: ₹${data.order.totalAmount}
 
 Please confirm my order.`;
 
-      const whatsappUrl = `https://wa.me/919849743774?text=${encodeURIComponent(
-        message
-      )}`;
+      const whatsappUrl =
+        `https://wa.me/919849743774?text=` +
+        encodeURIComponent(message);
 
-      window.open(whatsappUrl, "_blank");
+      window.open(
+        whatsappUrl,
+        "_blank"
+      );
 
-      console.log("Created order:", data.order);
+      console.log(
+        "Created order:",
+        data.order
+      );
     } catch (error) {
-      console.error("Failed to create order:", error);
+      console.error(
+        "Failed to create order:",
+        error
+      );
 
       setOrderError(
         "Something went wrong. Please try again."
@@ -195,8 +223,8 @@ Please confirm my order.`;
             </h1>
 
             <p className="mt-5 leading-7 text-white/40">
-              Please login to your Venu Trinity account before
-              purchasing this product.
+              Please login to your Venu Trinity account
+              before purchasing this product.
             </p>
 
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
@@ -357,5 +385,27 @@ Please confirm my order.`;
         </section>
       </main>
     </>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense
+      fallback={
+        <>
+          <Navbar />
+
+          <main className="min-h-screen bg-black px-6 py-32 text-white">
+            <div className="mx-auto max-w-7xl">
+              <p className="text-white/40">
+                Loading checkout...
+              </p>
+            </div>
+          </main>
+        </>
+      }
+    >
+      <CheckoutContent />
+    </Suspense>
   );
 }

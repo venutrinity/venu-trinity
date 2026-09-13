@@ -1,17 +1,10 @@
-import { cookies } from "next/headers";
-import jwt from "jsonwebtoken";
+import { getAuthUser } from "@/app/lib/auth";
 import mongoose from "mongoose";
 
 import connectDB from "@/app/lib/mongodb";
 import Order from "@/app/models/Order";
 import Product from "@/app/models/Product";
 import Download from "@/app/models/Download";
-
-const JWT_SECRET = process.env.JWT_SECRET;
-
-if (!JWT_SECRET) {
-  throw new Error("Please define JWT_SECRET in .env.local");
-}
 
 type RouteContext = {
   params: Promise<{
@@ -24,11 +17,13 @@ export async function PATCH(
   context: RouteContext
 ) {
   try {
-    // Check authentication
-    const cookieStore = await cookies();
-    const token = cookieStore.get("auth_token")?.value;
+    // --------------------------------------------------
+    // 1. Check authentication
+    // --------------------------------------------------
 
-    if (!token) {
+    const authUser = await getAuthUser();
+
+    if (!authUser) {
       return Response.json(
         {
           success: false,
@@ -38,14 +33,11 @@ export async function PATCH(
       );
     }
 
-    // Verify JWT
-    const decoded = jwt.verify(token, JWT_SECRET) as {
-      userId: string;
-      role: "customer" | "admin";
-    };
+    // --------------------------------------------------
+    // 2. Admin only
+    // --------------------------------------------------
 
-    // Only admins can update payment status
-    if (decoded.role !== "admin") {
+    if (authUser.role !== "admin") {
       return Response.json(
         {
           success: false,
@@ -55,11 +47,18 @@ export async function PATCH(
       );
     }
 
+    // --------------------------------------------------
+    // 3. Connect database
+    // --------------------------------------------------
+
     await connectDB();
 
     const { id } = await context.params;
 
-    // Validate order ID
+    // --------------------------------------------------
+    // 4. Validate order ID
+    // --------------------------------------------------
+
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return Response.json(
         {
@@ -74,7 +73,10 @@ export async function PATCH(
 
     const { paymentStatus } = body;
 
-    // Validate payment status
+    // --------------------------------------------------
+    // 5. Validate payment status
+    // --------------------------------------------------
+
     const allowedStatuses = [
       "pending",
       "paid",
@@ -92,7 +94,10 @@ export async function PATCH(
       );
     }
 
-    // Find order
+    // --------------------------------------------------
+    // 6. Find order
+    // --------------------------------------------------
+
     const order = await Order.findById(id);
 
     if (!order) {
@@ -105,12 +110,18 @@ export async function PATCH(
       );
     }
 
-    // Update payment status
+    // --------------------------------------------------
+    // 7. Update payment status
+    // --------------------------------------------------
+
     order.paymentStatus = paymentStatus;
 
     await order.save();
 
-    // Create download records when payment becomes paid
+    // --------------------------------------------------
+    // 8. Create download records when paid
+    // --------------------------------------------------
+
     if (paymentStatus === "paid") {
       for (const item of order.items) {
         const product = await Product.findById(
@@ -148,14 +159,26 @@ export async function PATCH(
       }
     }
 
+    // --------------------------------------------------
+    // 9. Response
+    // --------------------------------------------------
+
     return Response.json({
       success: true,
-      message: "Payment status updated successfully",
+      message:
+        "Payment status updated successfully",
+
       order: {
         id: order._id.toString(),
-        orderNumber: order.orderNumber,
-        paymentStatus: order.paymentStatus,
-        orderStatus: order.orderStatus,
+
+        orderNumber:
+          order.orderNumber,
+
+        paymentStatus:
+          order.paymentStatus,
+
+        orderStatus:
+          order.orderStatus,
       },
     });
   } catch (error) {
@@ -167,7 +190,8 @@ export async function PATCH(
     return Response.json(
       {
         success: false,
-        message: "Failed to update payment status",
+        message:
+          "Failed to update payment status",
       },
       { status: 500 }
     );

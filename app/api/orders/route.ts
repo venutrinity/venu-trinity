@@ -1,19 +1,7 @@
-import { cookies } from "next/headers";
-import jwt from "jsonwebtoken";
+import { getAuthUser } from "@/app/lib/auth";
 
 import connectDB from "@/app/lib/mongodb";
 import Order from "@/app/models/Order";
-
-const JWT_SECRET = process.env.JWT_SECRET;
-
-if (!JWT_SECRET) {
-  throw new Error("Please define JWT_SECRET in .env.local");
-}
-
-type AuthPayload = {
-  userId: string;
-  role: "customer" | "admin";
-};
 
 export async function GET() {
   try {
@@ -23,12 +11,9 @@ export async function GET() {
        Authentication
     ------------------------- */
 
-    const cookieStore = await cookies();
+    const authUser = await getAuthUser();
 
-    const token =
-      cookieStore.get("auth_token")?.value;
-
-    if (!token) {
+    if (!authUser) {
       return Response.json(
         {
           success: false,
@@ -38,17 +23,12 @@ export async function GET() {
       );
     }
 
-    const decoded = jwt.verify(
-      token,
-      JWT_SECRET
-    ) as AuthPayload;
-
     /* -------------------------
        Customer orders
     ------------------------- */
 
     const orders = await Order.find({
-      customerId: decoded.userId,
+      customerId: authUser.userId,
     })
       .sort({ createdAt: -1 })
       .lean();
@@ -122,12 +102,9 @@ export async function POST(
        Authentication
     ------------------------- */
 
-    const cookieStore = await cookies();
+    const authUser = await getAuthUser();
 
-    const token =
-      cookieStore.get("auth_token")?.value;
-
-    if (!token) {
+    if (!authUser) {
       return Response.json(
         {
           success: false,
@@ -137,12 +114,7 @@ export async function POST(
       );
     }
 
-    const decoded = jwt.verify(
-      token,
-      JWT_SECRET
-    ) as AuthPayload;
-
-    if (decoded.role !== "customer") {
+    if (authUser.role !== "customer") {
       return Response.json(
         {
           success: false,
@@ -192,7 +164,7 @@ export async function POST(
       );
     }
 
-    if (!product.published) {
+    if (product.status !== "published") {
       return Response.json(
         {
           success: false,
@@ -230,7 +202,7 @@ export async function POST(
           )}`,
 
         customerId:
-          decoded.userId,
+          authUser.userId,
 
         items: [
           {

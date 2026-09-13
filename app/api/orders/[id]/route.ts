@@ -1,19 +1,7 @@
-import { cookies } from "next/headers";
-import jwt from "jsonwebtoken";
+import { getAuthUser } from "@/app/lib/auth";
 
 import connectDB from "@/app/lib/mongodb";
 import Order from "@/app/models/Order";
-
-const JWT_SECRET = process.env.JWT_SECRET;
-
-if (!JWT_SECRET) {
-  throw new Error("Please define JWT_SECRET in .env.local");
-}
-
-type AuthPayload = {
-  userId: string;
-  role: "customer" | "admin";
-};
 
 export async function GET(
   request: Request,
@@ -28,12 +16,9 @@ export async function GET(
        Authentication
     ------------------------- */
 
-    const cookieStore = await cookies();
+    const authUser = await getAuthUser();
 
-    const token =
-      cookieStore.get("auth_token")?.value;
-
-    if (!token) {
+    if (!authUser) {
       return Response.json(
         {
           success: false,
@@ -42,11 +27,6 @@ export async function GET(
         { status: 401 }
       );
     }
-
-    const decoded = jwt.verify(
-      token,
-      JWT_SECRET
-    ) as AuthPayload;
 
     /* -------------------------
        Get order ID
@@ -87,8 +67,8 @@ export async function GET(
     ------------------------- */
 
     if (
-      decoded.role !== "admin" &&
-      order.customerId?.toString() !== decoded.userId
+      authUser.role !== "admin" &&
+      order.customerId?.toString() !== authUser.userId
     ) {
       return Response.json(
         {

@@ -1,17 +1,10 @@
-import { cookies } from "next/headers";
-import jwt from "jsonwebtoken";
+import { getAuthUser } from "@/app/lib/auth";
 import mongoose from "mongoose";
 
 import connectDB from "@/app/lib/mongodb";
 import Order from "@/app/models/Order";
 import User from "@/app/models/User";
 import Product from "@/app/models/Product";
-
-const JWT_SECRET = process.env.JWT_SECRET;
-
-if (!JWT_SECRET) {
-  throw new Error("Please define JWT_SECRET in .env.local");
-}
 
 type RouteContext = {
   params: Promise<{
@@ -28,10 +21,9 @@ export async function GET(
     // 1. Check authentication
     // --------------------------------------------------
 
-    const cookieStore = await cookies();
-    const token = cookieStore.get("auth_token")?.value;
+    const authUser = await getAuthUser();
 
-    if (!token) {
+    if (!authUser) {
       return Response.json(
         {
           success: false,
@@ -42,19 +34,10 @@ export async function GET(
     }
 
     // --------------------------------------------------
-    // 2. Verify JWT
+    // 2. Admin only
     // --------------------------------------------------
 
-    const decoded = jwt.verify(token, JWT_SECRET) as {
-      userId: string;
-      role: "customer" | "admin";
-    };
-
-    // --------------------------------------------------
-    // 3. Admin only
-    // --------------------------------------------------
-
-    if (decoded.role !== "admin") {
+    if (authUser.role !== "admin") {
       return Response.json(
         {
           success: false,
@@ -65,7 +48,7 @@ export async function GET(
     }
 
     // --------------------------------------------------
-    // 4. Connect MongoDB
+    // 3. Connect MongoDB
     // --------------------------------------------------
 
     await connectDB();
@@ -73,7 +56,7 @@ export async function GET(
     const { id } = await context.params;
 
     // --------------------------------------------------
-    // 5. Find order
+    // 4. Find order
     // --------------------------------------------------
 
     let order: any = null;
@@ -97,22 +80,24 @@ export async function GET(
     }
 
     // --------------------------------------------------
-    // 6. Find customer manually
+    // 5. Find customer manually
     // --------------------------------------------------
 
     let customer: any = null;
 
     if (order.customerId) {
-      customer = await User.findById(order.customerId)
+      customer = await User.findById(
+        order.customerId
+      )
         .select("name email phone")
         .lean();
     }
 
     // --------------------------------------------------
-    // 7. Find products manually
+    // 6. Find products manually
     // --------------------------------------------------
 
-    const productIds = order.items
+    const productIds: string[] = order.items
       .map((item: any) => {
         if (!item.productId) {
           return null;
@@ -120,9 +105,12 @@ export async function GET(
 
         return item.productId.toString();
       })
-      .filter(Boolean);
+      .filter(
+        (id: string | null): id is string =>
+          Boolean(id)
+      );
 
-    const uniqueProductIds = [
+    const uniqueProductIds: string[] = [
       ...new Set(productIds),
     ];
 
@@ -131,11 +119,13 @@ export async function GET(
         $in: uniqueProductIds,
       },
     })
-      .select("name slug category previewImage")
+      .select(
+        "name slug category previewImage"
+      )
       .lean();
 
     // --------------------------------------------------
-    // 8. Create product lookup
+    // 7. Create product lookup
     // --------------------------------------------------
 
     const productMap = new Map(
@@ -146,39 +136,47 @@ export async function GET(
     );
 
     // --------------------------------------------------
-    // 9. Prepare order items
+    // 8. Prepare order items
     // --------------------------------------------------
 
-    const items = order.items.map((item: any) => {
-      const productId = item.productId
-        ? item.productId.toString()
-        : "";
+    const items = order.items.map(
+      (item: any) => {
+        const productId = item.productId
+          ? item.productId.toString()
+          : "";
 
-      const product = productMap.get(productId);
+        const product =
+          productMap.get(productId);
 
-      return {
-        productId,
+        return {
+          productId,
 
-        name: item.name || product?.name || "Product",
+          name:
+            item.name ||
+            product?.name ||
+            "Product",
 
-        price: item.price || 0,
+          price: item.price || 0,
 
-        quantity: item.quantity || 1,
+          quantity:
+            item.quantity || 1,
 
-        product: product
-          ? {
-              name: product.name,
-              slug: product.slug,
-              category: product.category,
-              previewImage:
-                product.previewImage || "",
-            }
-          : null,
-      };
-    });
+          product: product
+            ? {
+                name: product.name,
+                slug: product.slug,
+                category:
+                  product.category,
+                previewImage:
+                  product.previewImage || "",
+              }
+            : null,
+        };
+      }
+    );
 
     // --------------------------------------------------
-    // 10. Return response
+    // 9. Return response
     // --------------------------------------------------
 
     return Response.json({
@@ -187,7 +185,8 @@ export async function GET(
       order: {
         id: order._id.toString(),
 
-        orderNumber: order.orderNumber,
+        orderNumber:
+          order.orderNumber,
 
         customer: customer
           ? {
@@ -205,23 +204,31 @@ export async function GET(
 
         items,
 
-        subtotal: order.subtotal || 0,
+        subtotal:
+          order.subtotal || 0,
 
-        discount: order.discount || 0,
+        discount:
+          order.discount || 0,
 
-        totalAmount: order.totalAmount || 0,
+        totalAmount:
+          order.totalAmount || 0,
 
         paymentStatus:
-          order.paymentStatus || "pending",
+          order.paymentStatus ||
+          "pending",
 
         orderStatus:
-          order.orderStatus || "pending",
+          order.orderStatus ||
+          "pending",
 
-        paymentId: order.paymentId || "",
+        paymentId:
+          order.paymentId || "",
 
-        createdAt: order.createdAt,
+        createdAt:
+          order.createdAt,
 
-        updatedAt: order.updatedAt,
+        updatedAt:
+          order.updatedAt,
       },
     });
   } catch (error) {
@@ -233,7 +240,8 @@ export async function GET(
     return Response.json(
       {
         success: false,
-        message: "Failed to load order details",
+        message:
+          "Failed to load order details",
       },
       { status: 500 }
     );

@@ -1,22 +1,14 @@
-import { cookies } from "next/headers";
-import jwt from "jsonwebtoken";
+import { getAuthUser } from "@/app/lib/auth";
 import connectDB from "@/app/lib/mongodb";
 import Invoice from "@/app/models/Invoice";
-
-const JWT_SECRET = process.env.JWT_SECRET;
-
-if (!JWT_SECRET) {
-  throw new Error("Please define JWT_SECRET in .env.local");
-}
 
 export async function GET() {
   try {
     await connectDB();
 
-    const cookieStore = await cookies();
-    const token = cookieStore.get("auth_token")?.value;
+    const authUser = await getAuthUser();
 
-    if (!token) {
+    if (!authUser) {
       return Response.json(
         {
           success: false,
@@ -26,13 +18,8 @@ export async function GET() {
       );
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET) as {
-      userId: string;
-      role: "customer" | "admin";
-    };
-
     const invoices = await Invoice.find({
-      customerId: decoded.userId,
+      customerId: authUser.userId,
     }).sort({ issuedAt: -1 });
 
     return Response.json({

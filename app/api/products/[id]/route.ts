@@ -14,17 +14,37 @@ export async function GET(
   context: RouteContext
 ) {
   try {
+    const user = await getAuthUser();
+
+    if (!user) {
+      return Response.json(
+        {
+          success: false,
+          message: "Not authenticated",
+        },
+        { status: 401 }
+      );
+    }
+
+    if (user.role !== "admin") {
+      return Response.json(
+        {
+          success: false,
+          message: "Admin access required",
+        },
+        { status: 403 }
+      );
+    }
+
     await connectDB();
 
     const { id } = await context.params;
 
     let product = null;
 
-    // If the value is a MongoDB ID, find by ID.
     if (mongoose.Types.ObjectId.isValid(id)) {
       product = await Product.findById(id);
     } else {
-      // Otherwise, find by slug.
       product = await Product.findOne({
         slug: id.toLowerCase(),
       });

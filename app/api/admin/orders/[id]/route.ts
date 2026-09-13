@@ -1,15 +1,8 @@
-import { cookies } from "next/headers";
-import jwt from "jsonwebtoken";
+import { getAuthUser } from "@/app/lib/auth";
 import mongoose from "mongoose";
 
 import connectDB from "@/app/lib/mongodb";
 import Order from "@/app/models/Order";
-
-const JWT_SECRET = process.env.JWT_SECRET;
-
-if (!JWT_SECRET) {
-  throw new Error("Please define JWT_SECRET in .env.local");
-}
 
 type RouteContext = {
   params: Promise<{
@@ -23,10 +16,9 @@ export async function PATCH(
 ) {
   try {
     // Check authentication
-    const cookieStore = await cookies();
-    const token = cookieStore.get("auth_token")?.value;
+    const authUser = await getAuthUser();
 
-    if (!token) {
+    if (!authUser) {
       return Response.json(
         {
           success: false,
@@ -36,14 +28,8 @@ export async function PATCH(
       );
     }
 
-    // Verify JWT
-    const decoded = jwt.verify(token, JWT_SECRET) as {
-      userId: string;
-      role: "customer" | "admin";
-    };
-
     // Only admins can update orders
-    if (decoded.role !== "admin") {
+    if (authUser.role !== "admin") {
       return Response.json(
         {
           success: false,

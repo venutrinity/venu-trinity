@@ -1,13 +1,7 @@
 import connectDB from "@/app/lib/mongodb";
 import User from "@/app/models/User";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
-
-const JWT_SECRET = process.env.JWT_SECRET;
-
-if (!JWT_SECRET) {
-  throw new Error("Please define JWT_SECRET in .env.local");
-}
+import { signAuthToken } from "@/app/lib/auth";
 
 export async function POST(request: Request) {
   try {
@@ -54,16 +48,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const token = jwt.sign(
-      {
-        userId: user._id.toString(),
-        role: user.role,
-      },
-      JWT_SECRET,
-      {
-        expiresIn: "7d",
-      }
-    );
+    const token = signAuthToken({
+      userId: user._id.toString(),
+      role: user.role,
+    });
 
     const response = Response.json({
       success: true,
