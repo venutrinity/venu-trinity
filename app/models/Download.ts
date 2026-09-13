@@ -1,23 +1,51 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
-export interface IDownloadFile {
+export interface IDownload extends Document {
+  customerId: mongoose.Types.ObjectId;
+  orderId: mongoose.Types.ObjectId;
+  productId: mongoose.Types.ObjectId;
+
+  productName: string;
+
   fileName: string;
   fileType: string;
   fileUrl: string;
-}
 
-export interface IDownload extends Document {
-  customerId: mongoose.Types.ObjectId;
-  productId: mongoose.Types.ObjectId;
-  productName: string;
-  files: IDownloadFile[];
-  purchasedAt: Date;
+  downloadCount: number;
+  maxDownloads?: number;
+
+  expiresAt?: Date;
+
   createdAt: Date;
   updatedAt: Date;
 }
 
-const DownloadFileSchema = new Schema<IDownloadFile>(
+const DownloadSchema = new Schema<IDownload>(
   {
+    customerId: {
+      type: Schema.Types.ObjectId,
+      required: true,
+      ref: "User",
+    },
+
+    orderId: {
+      type: Schema.Types.ObjectId,
+      required: true,
+      ref: "Order",
+    },
+
+    productId: {
+      type: Schema.Types.ObjectId,
+      required: true,
+      ref: "Product",
+    },
+
+    productName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
     fileName: {
       type: String,
       required: true,
@@ -35,40 +63,20 @@ const DownloadFileSchema = new Schema<IDownloadFile>(
       required: true,
       trim: true,
     },
-  },
-  { _id: false }
-);
 
-const DownloadSchema = new Schema<IDownload>(
-  {
-    customerId: {
-      type: Schema.Types.ObjectId,
-      required: true,
-      ref: "User",
+    downloadCount: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
 
-    productId: {
-      type: Schema.Types.ObjectId,
-      required: true,
-      ref: "Product",
+    maxDownloads: {
+      type: Number,
+      min: 1,
     },
 
-    productName: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    files: {
-      type: [DownloadFileSchema],
-      required: true,
-      default: [],
-    },
-
-    purchasedAt: {
+    expiresAt: {
       type: Date,
-      required: true,
-      default: Date.now,
     },
   },
   {
@@ -78,6 +86,9 @@ const DownloadSchema = new Schema<IDownload>(
 
 const Download: Model<IDownload> =
   mongoose.models.Download ||
-  mongoose.model<IDownload>("Download", DownloadSchema);
+  mongoose.model<IDownload>(
+    "Download",
+    DownloadSchema
+  );
 
 export default Download;

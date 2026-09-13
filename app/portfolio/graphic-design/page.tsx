@@ -1,39 +1,63 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import Navbar from "../../components/Navbar";
 import Reveal from "../../components/Reveal";
-import Link from "next/link";
 
-const projects = [
-  {
-    number: "01",
-    title: "YouTube Thumbnail Design",
-    description:
-      "High-impact thumbnail concepts designed to improve visual attention and click potential.",
-    category: "Thumbnail Design",
-  },
-  {
-    number: "02",
-    title: "Social Media Campaign",
-    description:
-      "Clean and engaging social media creatives built for modern digital brands.",
-    category: "Social Media",
-  },
-  {
-    number: "03",
-    title: "Brand Poster",
-    description:
-      "Premium poster compositions combining typography, imagery, and strong visual hierarchy.",
-    category: "Poster Design",
-  },
-  {
-    number: "04",
-    title: "Product Creative",
-    description:
-      "Product-focused visuals created for campaigns, promotions, and digital advertising.",
-    category: "Creative Design",
-  },
-];
+type PortfolioProject = {
+  _id: string;
+  title: string;
+  slug: string;
+  category: string;
+  description: string;
+  client?: string;
+  tools: string[];
+  images: string[];
+  status: "draft" | "published";
+};
 
 export default function GraphicDesignPage() {
+  const [projects, setProjects] = useState<PortfolioProject[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    async function loadProjects() {
+      try {
+        const response = await fetch("/api/portfolio");
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.message || "Failed to load projects"
+          );
+        }
+
+        const graphicProjects = (data.projects || []).filter(
+          (project: PortfolioProject) =>
+            project.category === "Graphic Design"
+        );
+
+        setProjects(graphicProjects);
+      } catch (error) {
+        console.error(
+          "Failed to load graphic design projects:",
+          error
+        );
+
+        setError(
+          "Unable to load graphic design projects."
+        );
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadProjects();
+  }, []);
+
   return (
     <>
       <Navbar />
@@ -52,14 +76,17 @@ export default function GraphicDesignPage() {
               <h1 className="max-w-5xl text-5xl font-semibold leading-[0.95] tracking-[-0.05em] md:text-7xl lg:text-8xl">
                 Visuals that
                 <br />
-                <span className="text-white/35">make an impact.</span>
+                <span className="text-white/35">
+                  make an impact.
+                </span>
               </h1>
             </Reveal>
 
             <Reveal delay={0.2}>
               <p className="mt-10 max-w-2xl text-base leading-8 text-white/45 md:text-lg">
-                A selection of graphic design work created for creators,
-                businesses, brands, and digital campaigns.
+                A selection of graphic design work created
+                for creators, businesses, brands, and digital
+                campaigns.
               </p>
             </Reveal>
           </div>
@@ -68,52 +95,121 @@ export default function GraphicDesignPage() {
         {/* Projects */}
         <section className="border-t border-white/10 px-6 py-20 md:px-10 md:py-28">
           <div className="mx-auto max-w-7xl">
-            <div className="grid gap-6 md:grid-cols-2">
-              {projects.map((project, index) => (
-                <Reveal key={project.number} delay={index * 0.08}>
-                  <article className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
-                    {/* Temporary portfolio preview */}
-                    <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-white/10 via-white/[0.03] to-transparent">
-                      <div className="absolute inset-0 opacity-20">
-                        <div className="h-full w-full bg-[linear-gradient(to_right,rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.08)_1px,transparent_1px)] bg-[size:40px_40px]" />
-                      </div>
+            {loading && (
+              <div className="flex min-h-[300px] items-center justify-center">
+                <div className="text-center">
+                  <div className="mx-auto h-8 w-8 animate-spin rounded-full border border-white/20 border-t-white" />
 
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-5xl font-semibold tracking-[-0.08em] text-white/20 transition duration-500 group-hover:scale-110 group-hover:text-white/30 md:text-7xl">
-                          VT
-                        </span>
-                      </div>
+                  <p className="mt-5 text-sm text-white/40">
+                    Loading projects...
+                  </p>
+                </div>
+              </div>
+            )}
 
-                      <span className="absolute left-5 top-5 text-xs tracking-[0.25em] text-white/30">
-                        {project.number}
-                      </span>
-                    </div>
+            {!loading && error && (
+              <div className="flex min-h-[300px] items-center justify-center">
+                <p className="text-sm text-white/40">
+                  {error}
+                </p>
+              </div>
+            )}
 
-                    <div className="p-6 md:p-8">
-                      <p className="text-xs uppercase tracking-[0.25em] text-white/30">
-                        {project.category}
-                      </p>
+            {!loading &&
+              !error &&
+              projects.length === 0 && (
+                <div className="flex min-h-[300px] items-center justify-center">
+                  <div className="text-center">
+                    <p className="text-lg text-white/60">
+                      No graphic design projects yet.
+                    </p>
 
-                      <div className="mt-4 flex items-start justify-between gap-5">
-                        <div>
-                          <h2 className="text-2xl font-medium tracking-tight">
-                            {project.title}
-                          </h2>
+                    <p className="mt-2 text-sm text-white/30">
+                      Published projects will appear here.
+                    </p>
+                  </div>
+                </div>
+              )}
 
-                          <p className="mt-3 max-w-md text-sm leading-6 text-white/40">
-                            {project.description}
-                          </p>
-                        </div>
+            {!loading &&
+              !error &&
+              projects.length > 0 && (
+                <div className="grid gap-6 md:grid-cols-2">
+                  {projects.map((project, index) => {
+                    const hasImage =
+                      project.images &&
+                      project.images.length > 0;
 
-                        <span className="text-xl text-white/40 transition-transform duration-300 group-hover:translate-x-1">
-                          ↗
-                        </span>
-                      </div>
-                    </div>
-                  </article>
-                </Reveal>
-              ))}
-            </div>
+                    return (
+                      <Reveal
+                        key={project._id}
+                        delay={index * 0.08}
+                      >
+                        <Link
+                          href={`/portfolio/${project.slug}`}
+                          className="group block overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]"
+                        >
+                          {/* Project Preview */}
+                          <div className="relative aspect-[16/10] overflow-hidden bg-[#080808]">
+                            {hasImage ? (
+                              <img
+                                src={project.images[0]}
+                                alt={project.title}
+                                className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105"
+                              />
+                            ) : (
+                              <>
+                                <div className="absolute inset-0 opacity-20">
+                                  <div className="h-full w-full bg-[linear-gradient(to_right,rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.08)_1px,transparent_1px)] bg-[size:40px_40px]" />
+                                </div>
+
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <span className="text-5xl font-semibold tracking-[-0.08em] text-white/20 transition duration-500 group-hover:scale-110 group-hover:text-white/30 md:text-7xl">
+                                    VT
+                                  </span>
+                                </div>
+                              </>
+                            )}
+
+                            {/* Overlay */}
+                            <div className="absolute inset-0 bg-black/10 transition duration-500 group-hover:bg-black/20" />
+
+                            {/* Number */}
+                            <span className="absolute left-5 top-5 text-xs tracking-[0.25em] text-white/40">
+                              {String(index + 1).padStart(
+                                2,
+                                "0"
+                              )}
+                            </span>
+
+                            {/* Arrow */}
+                            <div className="absolute right-5 top-5 flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-black/30 text-white/50 backdrop-blur-md transition-all duration-300 group-hover:border-white group-hover:bg-white group-hover:text-black">
+                              ↗
+                            </div>
+                          </div>
+
+                          {/* Content */}
+                          <div className="p-6 md:p-8">
+                            <p className="text-xs uppercase tracking-[0.25em] text-white/30">
+                              {project.category}
+                            </p>
+
+                            <div className="mt-4">
+                              <h2 className="text-2xl font-medium tracking-tight">
+                                {project.title}
+                              </h2>
+
+                              <p className="mt-3 max-w-md text-sm leading-6 text-white/40">
+                                {project.description}
+                              </p>
+                            </div>
+                          </div>
+                        </Link>
+                      </Reveal>
+                    );
+                  })}
+                </div>
+              )}
           </div>
         </section>
 

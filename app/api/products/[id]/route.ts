@@ -14,43 +14,21 @@ export async function GET(
   context: RouteContext
 ) {
   try {
-    const user = await getAuthUser();
-
-    if (!user) {
-      return Response.json(
-        {
-          success: false,
-          message: "Not authenticated",
-        },
-        { status: 401 }
-      );
-    }
-
-    if (user.role !== "admin") {
-      return Response.json(
-        {
-          success: false,
-          message: "Admin access required",
-        },
-        { status: 403 }
-      );
-    }
+    await connectDB();
 
     const { id } = await context.params;
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return Response.json(
-        {
-          success: false,
-          message: "Invalid product ID",
-        },
-        { status: 400 }
-      );
+    let product = null;
+
+    // If the value is a MongoDB ID, find by ID.
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      product = await Product.findById(id);
+    } else {
+      // Otherwise, find by slug.
+      product = await Product.findOne({
+        slug: id.toLowerCase(),
+      });
     }
-
-    await connectDB();
-
-    const product = await Product.findById(id);
 
     if (!product) {
       return Response.json(
@@ -78,6 +56,7 @@ export async function GET(
     );
   }
 }
+
 export async function PUT(
   request: Request,
   context: RouteContext
@@ -105,17 +84,11 @@ export async function PUT(
       );
     }
 
+    await connectDB();
+
     const { id } = await context.params;
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return Response.json(
-        {
-          success: false,
-          message: "Invalid product ID",
-        },
-        { status: 400 }
-      );
-    }
+    const body = await request.json();
 
     const {
       name,
@@ -124,20 +97,9 @@ export async function PUT(
       description,
       price,
       previewImage,
+      files,
       status,
-    } = await request.json();
-
-    if (!name || !slug || !category || !description || price === undefined) {
-      return Response.json(
-        {
-          success: false,
-          message: "Required product fields are missing",
-        },
-        { status: 400 }
-      );
-    }
-
-    await connectDB();
+    } = body;
 
     const product = await Product.findById(id);
 
@@ -151,28 +113,14 @@ export async function PUT(
       );
     }
 
-    const existingProduct = await Product.findOne({
-      slug: slug.toLowerCase().trim(),
-      _id: { $ne: id },
-    });
-
-    if (existingProduct) {
-      return Response.json(
-        {
-          success: false,
-          message: "A product with this slug already exists",
-        },
-        { status: 409 }
-      );
-    }
-
-    product.name = name.trim();
-    product.slug = slug.toLowerCase().trim();
+    product.name = name;
+    product.slug = slug;
     product.category = category;
-    product.description = description.trim();
+    product.description = description;
     product.price = Number(price);
-    product.previewImage = previewImage?.trim() || "";
-    product.status = status || "draft";
+    product.previewImage = previewImage || "";
+    product.files = files || [];
+    product.status = status;
 
     await product.save();
 
@@ -193,6 +141,7 @@ export async function PUT(
     );
   }
 }
+
 export async function DELETE(
   request: Request,
   context: RouteContext
@@ -220,19 +169,9 @@ export async function DELETE(
       );
     }
 
-    const { id } = await context.params;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return Response.json(
-        {
-          success: false,
-          message: "Invalid product ID",
-        },
-        { status: 400 }
-      );
-    }
-
     await connectDB();
+
+    const { id } = await context.params;
 
     const product = await Product.findByIdAndDelete(id);
 

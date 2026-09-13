@@ -1,51 +1,44 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import Reveal from "../components/Reveal";
 import Link from "next/link";
 
-const products = [
-  {
-    number: "01",
-    category: "PSD Files",
-    title: "Premium Photoshop Assets",
-    description:
-      "Ready-to-use PSD files and editable design assets for creators and designers.",
-    price: "From ₹199",
-  },
-  {
-    number: "02",
-    category: "Design Templates",
-    title: "Social Media Template Pack",
-    description:
-      "Professional templates for Instagram posts, stories, YouTube thumbnails, and campaigns.",
-    price: "From ₹299",
-  },
-  {
-    number: "03",
-    category: "Website Templates",
-    title: "Premium Website Templates",
-    description:
-      "Modern website templates designed for creators, businesses, portfolios, and startups.",
-    price: "From ₹999",
-  },
-  {
-    number: "04",
-    category: "Documents",
-    title: "Business Document Pack",
-    description:
-      "Professionally designed proposals, invoices, presentations, brochures, and business documents.",
-    price: "From ₹199",
-  },
-  {
-    number: "05",
-    category: "Courses",
-    title: "Creative & Digital Courses",
-    description:
-      "Practical courses covering graphic design, video editing, web development, AI tools, and digital skills.",
-    price: "Coming Soon",
-  },
-];
+type Product = {
+  _id: string;
+  name: string;
+  slug: string;
+  category: string;
+  description: string;
+  price: number;
+  previewImage?: string;
+  status: "draft" | "published";
+};
 
 export default function DigitalProductsPage() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadProducts() {
+      try {
+        const response = await fetch("/api/products");
+        const data = await response.json();
+
+        if (response.ok) {
+          setProducts(data.products || []);
+        }
+      } catch (error) {
+        console.error("Failed to load products:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadProducts();
+  }, []);
+
   return (
     <>
       <Navbar />
@@ -82,65 +75,108 @@ export default function DigitalProductsPage() {
         {/* Products */}
         <section className="border-t border-white/10 px-6 py-20 md:px-10 md:py-28">
           <div className="mx-auto max-w-7xl">
-            <div className="grid gap-6 md:grid-cols-2">
-              {products.map((product, index) => (
-                <Reveal key={product.number} delay={index * 0.08}>
-                  <article className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] transition duration-500 hover:border-white/20">
-                    {/* Product Preview */}
-                    <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-white/10 via-white/[0.03] to-transparent">
-                      <div className="absolute inset-0 opacity-20">
-                        <div className="h-full w-full bg-[linear-gradient(to_right,rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.08)_1px,transparent_1px)] bg-[size:40px_40px]" />
-                      </div>
+            {/* Loading */}
+            {loading && (
+              <div className="py-20 text-center">
+                <p className="text-sm text-white/40">
+                  Loading products...
+                </p>
+              </div>
+            )}
 
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="text-center transition duration-500 group-hover:scale-110">
-                          <div className="text-6xl font-semibold tracking-[-0.08em] text-white/15 md:text-8xl">
-                            VT
-                          </div>
+            {/* Empty State */}
+            {!loading && products.length === 0 && (
+              <Reveal>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-20 text-center">
+                  <p className="text-xs uppercase tracking-[0.3em] text-white/30">
+                    Store
+                  </p>
 
-                          <p className="mt-3 text-[9px] uppercase tracking-[0.4em] text-white/15">
-                            {product.category}
-                          </p>
-                        </div>
-                      </div>
+                  <h2 className="mt-5 text-3xl font-medium">
+                    No products available yet.
+                  </h2>
 
-                      <span className="absolute left-5 top-5 text-xs tracking-[0.3em] text-white/30">
-                        {product.number}
-                      </span>
+                  <p className="mx-auto mt-4 max-w-lg text-sm leading-7 text-white/40">
+                    New digital products will appear here once they are
+                    published from the admin panel.
+                  </p>
+                </div>
+              </Reveal>
+            )}
 
-                      <span className="absolute right-5 top-5 rounded-full border border-white/10 px-3 py-1 text-[10px] text-white/40">
-                        {product.price}
-                      </span>
-                    </div>
+            {/* Products Grid */}
+            {!loading && products.length > 0 && (
+              <div className="grid gap-6 md:grid-cols-2">
+                {products.map((product, index) => (
+                  <Reveal key={product._id} delay={index * 0.08}>
+                    <article className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] transition duration-500 hover:border-white/20">
+                      {/* Product Preview */}
+                      <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-white/10 via-white/[0.03] to-transparent">
+                        {product.previewImage ? (
+                          <img
+                            src={product.previewImage}
+                            alt={product.name}
+                            className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
+                          />
+                        ) : (
+                          <>
+                            <div className="absolute inset-0 opacity-20">
+                              <div className="h-full w-full bg-[linear-gradient(to_right,rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.08)_1px,transparent_1px)] bg-[size:40px_40px]" />
+                            </div>
 
-                    {/* Product Info */}
-                    <div className="p-6 md:p-8">
-                      <p className="text-xs uppercase tracking-[0.25em] text-white/30">
-                        {product.category}
-                      </p>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <div className="text-center transition duration-500 group-hover:scale-110">
+                                <div className="text-6xl font-semibold tracking-[-0.08em] text-white/15 md:text-8xl">
+                                  VT
+                                </div>
 
-                      <h2 className="mt-4 text-2xl font-medium tracking-tight">
-                        {product.title}
-                      </h2>
+                                <p className="mt-3 text-[9px] uppercase tracking-[0.4em] text-white/15">
+                                  {product.category}
+                                </p>
+                              </div>
+                            </div>
+                          </>
+                        )}
 
-                      <p className="mt-3 max-w-md text-sm leading-6 text-white/40">
-                        {product.description}
-                      </p>
-
-                      <button
-                        type="button"
-                        className="mt-7 inline-flex items-center gap-3 rounded-full border border-white/10 px-5 py-3 text-xs text-white/60 transition hover:border-white/25 hover:text-white"
-                      >
-                        View Product
-                        <span className="transition-transform duration-300 group-hover:translate-x-1">
-                          ↗
+                        <span className="absolute left-5 top-5 text-xs tracking-[0.3em] text-white/30">
+                          {String(index + 1).padStart(2, "0")}
                         </span>
-                      </button>
-                    </div>
-                  </article>
-                </Reveal>
-              ))}
-            </div>
+
+                        <span className="absolute right-5 top-5 rounded-full border border-white/10 bg-black/20 px-3 py-1 text-[10px] text-white/50 backdrop-blur-md">
+                          ₹{product.price}
+                        </span>
+                      </div>
+
+                      {/* Product Info */}
+                      <div className="p-6 md:p-8">
+                        <p className="text-xs uppercase tracking-[0.25em] text-white/30">
+                          {product.category}
+                        </p>
+
+                        <h2 className="mt-4 text-2xl font-medium tracking-tight">
+                          {product.name}
+                        </h2>
+
+                        <p className="mt-3 max-w-md text-sm leading-6 text-white/40">
+                          {product.description}
+                        </p>
+
+                        <Link
+                          href={`/digital-products/${product.slug}`}
+                          className="mt-7 inline-flex items-center gap-3 rounded-full border border-white/10 px-5 py-3 text-xs text-white/60 transition hover:border-white/25 hover:text-white"
+                        >
+                          View Product
+
+                          <span className="transition-transform duration-300 group-hover:translate-x-1">
+                            ↗
+                          </span>
+                        </Link>
+                      </div>
+                    </article>
+                  </Reveal>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 

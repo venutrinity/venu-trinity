@@ -1,35 +1,56 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 
-const projects = [
-  {
-    number: "01",
-    category: "Brand Identity",
-    title: "Building brands that feel impossible to ignore.",
-    description:
-      "Visual identity, art direction and creative systems designed for modern brands.",
-    size: "md:col-span-2",
-  },
-  {
-    number: "02",
-    category: "Digital Experience",
-    title: "Digital experiences with purpose.",
-    description:
-      "Clean interfaces, motion and interaction designed to make brands memorable.",
-    size: "",
-  },
-  {
-    number: "03",
-    category: "Creative Campaign",
-    title: "Ideas transformed into visual stories.",
-    description:
-      "Campaign concepts, social content and visual communication built to connect.",
-    size: "",
-  },
-];
+type PortfolioProject = {
+  _id: string;
+  title: string;
+  slug: string;
+  category: string;
+  description: string;
+  images: string[];
+};
 
 export default function SelectedWork() {
+  const [projects, setProjects] = useState<PortfolioProject[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadProjects() {
+      try {
+        const response = await fetch("/api/portfolio");
+
+        if (!response.ok) {
+          throw new Error("Failed to load portfolio");
+        }
+
+        const data = await response.json();
+
+        if (data.success && Array.isArray(data.projects)) {
+          const visualProjects = data.projects
+            .filter(
+              (project: PortfolioProject) =>
+                project.images &&
+                project.images.length > 0
+            )
+            .slice(0, 3);
+
+          setProjects(visualProjects);
+        }
+      } catch (error) {
+        console.error(
+          "Selected work loading failed:",
+          error
+        );
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadProjects();
+  }, []);
+
   return (
     <section
       id="work"
@@ -68,89 +89,124 @@ export default function SelectedWork() {
           </a>
         </div>
 
+        {/* Loading */}
+        {loading && (
+          <div className="grid gap-5 md:grid-cols-2">
+            <div className="aspect-[16/10] animate-pulse rounded-[2rem] border border-white/10 bg-white/[0.025] md:col-span-2" />
+
+            <div className="aspect-[16/10] animate-pulse rounded-[2rem] border border-white/10 bg-white/[0.025]" />
+
+            <div className="aspect-[16/10] animate-pulse rounded-[2rem] border border-white/10 bg-white/[0.025]" />
+          </div>
+        )}
+
+        {/* No projects */}
+        {!loading && projects.length === 0 && (
+          <div className="rounded-[2rem] border border-white/10 bg-white/[0.025] p-12 text-center">
+            <p className="text-sm text-white/40">
+              Selected work coming soon.
+            </p>
+          </div>
+        )}
+
         {/* Projects */}
-        <div className="grid gap-5 md:grid-cols-2">
-          {projects.map((project, index) => (
-            <motion.article
-              key={project.number}
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.15 }}
-              transition={{
-                duration: 0.8,
-                delay: index * 0.08,
-                ease: [0.22, 1, 0.36, 1],
-              }}
-              className={`group relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.025] ${project.size}`}
-            >
-              {/* Visual area */}
-              <div className="relative aspect-[16/10] overflow-hidden bg-[#090909]">
-                {/* Background glow */}
-                <div className="absolute left-1/2 top-1/2 h-56 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/[0.035] blur-[80px] transition-all duration-700 group-hover:h-72 group-hover:w-72 group-hover:bg-white/[0.06]" />
+        {!loading && projects.length > 0 && (
+          <div className="grid gap-5 md:grid-cols-2">
+            {projects.map((project, index) => {
+              const isFeatured = index === 0;
 
-                {/* Grid */}
-                <div className="absolute inset-0 opacity-[0.045]">
-                  <div className="h-full w-full bg-[linear-gradient(to_right,rgba(255,255,255,0.2)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.2)_1px,transparent_1px)] bg-[size:50px_50px]" />
-                </div>
-
-                {/* Center visual placeholder */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <motion.div
-                    className="flex h-32 w-32 items-center justify-center rounded-full border border-white/10 bg-white/[0.025] backdrop-blur-sm md:h-40 md:w-40"
-                    whileHover={{
-                      scale: 1.08,
-                      rotate: 4,
-                    }}
-                    transition={{
-                      duration: 0.5,
-                      ease: [0.22, 1, 0.36, 1],
-                    }}
+              return (
+                <motion.a
+                  key={project._id}
+                  href={`/portfolio/${project.slug}`}
+                  initial={{
+                    opacity: 0,
+                    y: 40,
+                  }}
+                  whileInView={{
+                    opacity: 1,
+                    y: 0,
+                  }}
+                  viewport={{
+                    once: true,
+                    amount: 0.15,
+                  }}
+                  transition={{
+                    duration: 0.8,
+                    delay: index * 0.08,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                  className={`group relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.025] ${
+                    isFeatured ? "md:col-span-2" : ""
+                  }`}
+                >
+                  {/* Image */}
+                  <div
+                    className={`relative overflow-hidden bg-[#090909] ${
+                      isFeatured
+                        ? "aspect-[16/9]"
+                        : "aspect-[16/10]"
+                    }`}
                   >
-                    <span className="text-4xl font-semibold tracking-[-0.08em] text-white/20 md:text-5xl">
-                      VT
-                    </span>
-                  </motion.div>
-                </div>
+                    <img
+                      src={project.images[0]}
+                      alt={project.title}
+                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-1000 ease-out group-hover:scale-105"
+                    />
 
-                {/* Number */}
-                <div className="absolute left-6 top-6">
-                  <span className="text-[10px] uppercase tracking-[0.25em] text-white/35">
-                    {project.number}
-                  </span>
-                </div>
+                    {/* Cinematic overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/10 to-black/5" />
 
-                {/* Arrow */}
-                <div className="absolute right-6 top-6 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/20 text-white/50 backdrop-blur-sm transition-all duration-300 group-hover:border-white/30 group-hover:bg-white group-hover:text-black">
-                  <span className="transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
-                    ↗
-                  </span>
-                </div>
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/[0.08] via-transparent to-transparent opacity-60 transition-opacity duration-500 group-hover:opacity-100" />
 
-                {/* Hover overlay */}
-                <div className="absolute inset-0 bg-white/[0.02] opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-              </div>
+                    {/* Top information */}
+                    <div className="absolute left-5 right-5 top-5 flex items-center justify-between md:left-7 md:right-7 md:top-7">
+                      <span className="rounded-full border border-white/15 bg-black/20 px-3 py-1.5 text-[8px] uppercase tracking-[0.25em] text-white/65 backdrop-blur-md">
+                        {isFeatured
+                          ? "Featured Work"
+                          : `0${index + 1}`}
+                      </span>
 
-              {/* Content */}
-              <div className="border-t border-white/10 p-6 md:p-8">
-                <div className="mb-5 flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-white/40" />
+                      <span className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/20 text-sm text-white/60 backdrop-blur-md transition-all duration-300 group-hover:border-white group-hover:bg-white group-hover:text-black">
+                        ↗
+                      </span>
+                    </div>
 
-                  <p className="text-[10px] uppercase tracking-[0.25em] text-white/35">
-                    {project.category}
-                  </p>
-                </div>
+                    {/* Bottom content */}
+                    <div className="absolute bottom-5 left-5 right-5 md:bottom-7 md:left-7 md:right-7">
+                      <p className="text-[8px] uppercase tracking-[0.3em] text-white/50">
+                        {project.category}
+                      </p>
 
-                <h3 className="max-w-xl text-2xl font-medium leading-tight tracking-[-0.025em] text-white/90 transition-colors duration-300 group-hover:text-white md:text-3xl">
-                  {project.title}
-                </h3>
+                      <h3
+                        className={`mt-2 max-w-3xl font-medium leading-tight tracking-[-0.04em] text-white ${
+                          isFeatured
+                            ? "text-2xl sm:text-4xl md:text-5xl"
+                            : "text-xl md:text-2xl"
+                        }`}
+                      >
+                        {project.title}
+                      </h3>
 
-                <p className="mt-4 max-w-xl text-sm leading-6 text-white/35">
-                  {project.description}
-                </p>
-              </div>
-            </motion.article>
-          ))}
-        </div>
+                      {isFeatured && (
+                        <p className="mt-3 hidden max-w-xl text-sm leading-6 text-white/50 sm:block">
+                          {project.description}
+                        </p>
+                      )}
+
+                      <div className="mt-4 flex items-center gap-2 text-[8px] uppercase tracking-[0.25em] text-white/45">
+                        View project
+                        <span className="transition-transform duration-300 group-hover:translate-x-1">
+                          →
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </motion.a>
+              );
+            })}
+          </div>
+        )}
       </div>
     </section>
   );
